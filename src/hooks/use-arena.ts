@@ -1,7 +1,9 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import type { AIModel, ArenaResponse } from '@/types/ai';
+import type { ArenaResponse } from '@/types/ai';
+import type { ConnectorId } from '@/types/connectors';
+import { getConnector } from '@/lib/constants/connectors';
 import { orchestrate } from '@/lib/ai/orchestrator';
 
 export function useArena() {
@@ -9,25 +11,27 @@ export function useArena() {
   const [isRunning, setIsRunning] = useState(false);
 
   const updateResponse = useCallback(
-    (modelKey: string, update: Partial<ArenaResponse>) => {
+    (connectorId: ConnectorId, update: Partial<ArenaResponse>) => {
       setResponses((prev) => ({
         ...prev,
-        [modelKey]: { ...(prev[modelKey] ?? {}), ...update } as ArenaResponse,
+        [connectorId]: { ...(prev[connectorId] ?? {}), ...update } as ArenaResponse,
       }));
     },
     []
   );
 
   const run = useCallback(
-    async (prompt: string, models: AIModel[]) => {
-      if (!prompt.trim() || models.length === 0) return;
+    async (prompt: string, connectorIds: ConnectorId[]) => {
+      if (!prompt.trim() || connectorIds.length === 0) return;
 
-      // Initialize all responses
       const initial: Record<string, ArenaResponse> = {};
-      models.forEach((model) => {
-        initial[model.modelKey] = {
-          id: `resp-${model.modelKey}-${Date.now()}`,
-          model,
+      connectorIds.forEach((id) => {
+        const connector = getConnector(id);
+        initial[id] = {
+          id: `resp-${id}-${Date.now()}`,
+          connectorId: id,
+          connectorName: connector?.name ?? id,
+          provider: connector?.providerName ?? 'AI Platform',
           status: 'waiting',
           content: '',
         };
@@ -37,7 +41,7 @@ export function useArena() {
 
       try {
         await orchestrate({
-          models,
+          connectorIds,
           generateOptions: { prompt },
           onUpdate: updateResponse,
         });

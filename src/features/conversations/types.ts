@@ -1,13 +1,16 @@
 import type { ArenaResponse } from '@/types/ai';
 import type { Attachment } from '@/types/app';
 import type { ArenaReview, ResponsePreference } from '@/features/review/types';
+import type { ConnectorId } from '@/types/connectors';
 
 export interface ConversationTurn {
   id: string;
   conversationId: string;
   prompt: string;
   attachments: Attachment[];
-  selectedModelKeys: string[];
+  selectedConnectorIds: ConnectorId[];
+  /** Optional legacy keys for backward-compat with previously saved mock turns */
+  selectedModelKeys?: string[];
   responses: ArenaResponse[];
   review?: ArenaReview;
   preferences: ResponsePreference[];
@@ -19,7 +22,9 @@ export interface StoredConversation {
   title: string;
   createdAt: string;
   updatedAt: string;
-  selectedModelKeys: string[];
+  selectedConnectorIds: ConnectorId[];
+  /** Optional legacy keys */
+  selectedModelKeys?: string[];
   turns: ConversationTurn[];
 }
 

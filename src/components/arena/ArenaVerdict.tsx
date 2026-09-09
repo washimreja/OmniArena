@@ -3,9 +3,10 @@
 import React, { useState } from 'react';
 import { ChevronDown, ChevronUp, Sparkles, Trophy } from 'lucide-react';
 import { cn } from '@/lib/utils/cn';
-import { ProviderIcon } from '@/components/models/ProviderIcon';
+import { ConnectorIcon } from '@/components/icons/ConnectorIcon';
 import type { ArenaResponse } from '@/types/ai';
 import type { ArenaReview, ResponsePreference } from '@/features/review/types';
+import type { ConnectorId } from '@/types/connectors';
 
 interface ArenaVerdictProps {
   responses: ArenaResponse[];
@@ -14,8 +15,21 @@ interface ArenaVerdictProps {
   className?: string;
 }
 
-function findResponse(responses: ArenaResponse[], modelKey: string): ArenaResponse | undefined {
-  return responses.find((response) => response.model.modelKey === modelKey);
+function findResponse(responses: ArenaResponse[], key: string): ArenaResponse | undefined {
+  return responses.find(
+    (response) =>
+      response.connectorId === key ||
+      response.model?.modelKey === key ||
+      response.connectorName.toLowerCase() === key.toLowerCase()
+  );
+}
+
+function getConnectorId(response: ArenaResponse): ConnectorId {
+  return response.connectorId || 'chatgpt';
+}
+
+function getDisplayName(response: ArenaResponse): string {
+  return response.connectorName || response.model?.displayName || 'AI Platform';
 }
 
 export function ArenaVerdict({ responses, review, preferences, className }: ArenaVerdictProps) {
@@ -23,15 +37,16 @@ export function ArenaVerdict({ responses, review, preferences, className }: Aren
   const verdict = review.verdict;
   if (!verdict) return null;
 
-  const winner = findResponse(responses, verdict.bestOverallModelKey);
-  const quickAnswer = findResponse(responses, verdict.bestForQuickAnswerModelKey);
-  const deepExplanation = findResponse(responses, verdict.bestForDeepExplanationModelKey);
+  const winner = findResponse(responses, verdict.bestOverallModelKey) ?? responses[0];
+  const quickAnswer = findResponse(responses, verdict.bestForQuickAnswerModelKey) ?? responses[0];
+  const deepExplanation = findResponse(responses, verdict.bestForDeepExplanationModelKey) ?? responses[0];
   const preferredResponseId = preferences.find((preference) => preference.type === 'preferred')?.responseId;
   const userPreferred = responses.find((response) => response.id === preferredResponseId);
+
   if (!winner || !quickAnswer || !deepExplanation) return null;
 
   return (
-    <section className={cn('card-surface border-accent/20 overflow-hidden', className)}>
+    <section className={cn('card-surface border-accent/20 overflow-hidden rounded-xl', className)}>
       <button
         type="button"
         onClick={() => setExpanded((current) => !current)}
@@ -45,8 +60,8 @@ export function ArenaVerdict({ responses, review, preferences, className }: Aren
           <div>
             <p className="text-xs font-semibold uppercase tracking-widest text-accent mb-0.5">Arena Verdict</p>
             <div className="flex items-center gap-2">
-              <ProviderIcon provider={winner.model.provider} size="sm" />
-              <span className="text-sm font-bold text-text-primary">{winner.model.displayName}</span>
+              <ConnectorIcon connectorId={getConnectorId(winner)} size="xs" />
+              <span className="text-sm font-bold text-text-primary">{getDisplayName(winner)}</span>
               <span className="text-xs text-text-muted">{verdict.outcome === 'tie' ? 'leads a close call' : 'is recommended overall'}</span>
             </div>
           </div>
@@ -72,10 +87,10 @@ export function ArenaVerdict({ responses, review, preferences, className }: Aren
             </div>
           </div>
           <div className="pt-3 border-t border-border-subtle grid gap-2 text-[11px] text-text-muted sm:grid-cols-2">
-            <p>Best for a quick answer: <span className="text-text-secondary">{quickAnswer.model.displayName}</span></p>
-            <p>Best for depth: <span className="text-text-secondary">{deepExplanation.model.displayName}</span></p>
+            <p>Best for a quick answer: <span className="text-text-secondary">{getDisplayName(quickAnswer)}</span></p>
+            <p>Best for depth: <span className="text-text-secondary">{getDisplayName(deepExplanation)}</span></p>
             <p>Comparison confidence: <span className="text-text-secondary capitalize">{verdict.confidence}</span></p>
-            {userPreferred && <p>Your preference: <span className="text-text-secondary">{userPreferred.model.displayName}</span></p>}
+            {userPreferred && <p>Your preference: <span className="text-text-secondary">{getDisplayName(userPreferred)}</span></p>}
           </div>
         </div>
       )}

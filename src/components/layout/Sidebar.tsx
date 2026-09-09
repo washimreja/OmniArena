@@ -6,12 +6,13 @@ import { usePathname, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus, MessageSquare, Compass, Settings,
-  ChevronLeft, ChevronRight, Search, Clock,
+  ChevronLeft, ChevronRight, Search, Clock, SlidersHorizontal
 } from 'lucide-react';
 import { cn } from '@/lib/utils/cn';
 import { truncate, groupByDate } from '@/lib/utils/format';
 import { BrandMark } from './BrandMark';
 import { useConversationStore } from '@/features/conversations/conversation-store';
+import { useConnectors } from '@/features/connectors/connector-context';
 import type { StoredConversation } from '@/features/conversations/types';
 
 interface SidebarProps {
@@ -21,7 +22,7 @@ interface SidebarProps {
 
 function OmniArenaLogo({ collapsed }: { collapsed: boolean }) {
   return (
-    <div className="px-2 py-1">
+    <div className="px-1 py-1">
       <BrandMark label={!collapsed} />
     </div>
   );
@@ -67,12 +68,15 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const { conversations, createConversation } = useConversationStore();
+  const { openModal } = useConnectors();
   const [search, setSearch] = useState('');
+
   const filteredConversations = useMemo(() => {
     const query = search.trim().toLowerCase();
     if (!query) return conversations;
     return conversations.filter((conversation) => conversation.title.toLowerCase().includes(query));
   }, [conversations, search]);
+
   const groups = groupByDate(filteredConversations);
 
   const handleNewArena = () => {
@@ -80,10 +84,8 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
     router.push(`/app/chat/${conversation.id}`);
   };
 
-  const navItems = [
-    { href: '/app/models', icon: Compass, label: 'Explore Models' },
-    { href: '/app/settings', icon: Settings, label: 'Settings' },
-  ];
+  const isModelsActive = pathname.startsWith('/app/models');
+  const isSettingsActive = pathname.startsWith('/app/settings');
 
   return (
     <>
@@ -113,7 +115,7 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
           </button>
         </div>
 
-        {/* New Chat button */}
+        {/* New Arena button */}
         <div className={cn('px-2 pt-4 pb-3', !isOpen && 'flex justify-center')}>
           <button
             type="button"
@@ -146,7 +148,7 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
-              className="px-2 pb-4"
+              className="px-2 pb-3"
             >
               <div className="flex items-center gap-2 px-2.5 py-2 bg-bg-surface rounded-btn border border-border-subtle focus-within:border-border-strong transition-colors">
                 <Search size={13} className="text-text-muted flex-shrink-0" />
@@ -198,45 +200,92 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
           )}
         </div>
 
-        {/* Bottom nav */}
-        <div className="border-t border-border-subtle px-2 py-3 space-y-0.5">
-          {navItems.map((item) => {
-            const isActive = pathname.startsWith(item.href);
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                title={!isOpen ? item.label : undefined}
-                className={cn(
-              'flex items-center gap-2 px-2.5 py-2 rounded-btn text-sm transition-colors',
-                  !isOpen && 'justify-center',
-                  isActive
-                    ? 'bg-accent/10 text-accent'
-                    : 'text-text-secondary hover:text-text-primary hover:bg-bg-elevated'
-                )}
-              >
-                <item.icon size={16} className="flex-shrink-0" />
-                <AnimatePresence>
-                  {isOpen && (
-                    <motion.span
-                      initial={{ opacity: 0, width: 0 }}
-                      animate={{ opacity: 1, width: 'auto' }}
-                      exit={{ opacity: 0, width: 0 }}
-                      className="overflow-hidden whitespace-nowrap text-xs"
-                    >
-                      {item.label}
-                    </motion.span>
-                  )}
-                </AnimatePresence>
-              </Link>
-            );
-          })}
+        {/* Navigation Actions: Explore Models + Manage Connectors */}
+        <div className="border-t border-border-subtle px-2 py-2 space-y-1">
+          <Link
+            href="/app/models"
+            title={!isOpen ? 'Explore Models' : undefined}
+            className={cn(
+              'flex items-center gap-2.5 px-2.5 py-2 rounded-btn text-xs font-medium transition-colors',
+              !isOpen && 'justify-center px-0 w-9 h-9 mx-auto',
+              isModelsActive
+                ? 'bg-accent/10 text-accent'
+                : 'text-text-secondary hover:text-text-primary hover:bg-bg-elevated'
+            )}
+          >
+            <Compass size={15} className="flex-shrink-0" />
+            <AnimatePresence>
+              {isOpen && (
+                <motion.span
+                  initial={{ opacity: 0, width: 0 }}
+                  animate={{ opacity: 1, width: 'auto' }}
+                  exit={{ opacity: 0, width: 0 }}
+                  className="overflow-hidden whitespace-nowrap"
+                >
+                  Explore Models
+                </motion.span>
+              )}
+            </AnimatePresence>
+          </Link>
 
-          {/* User */}
+          <button
+            type="button"
+            onClick={openModal}
+            title={!isOpen ? 'Manage Connectors' : undefined}
+            className={cn(
+              'w-full flex items-center gap-2.5 px-2.5 py-2 rounded-btn text-xs font-medium text-text-secondary hover:text-text-primary hover:bg-bg-elevated transition-colors text-left',
+              !isOpen && 'justify-center px-0 w-9 h-9 mx-auto'
+            )}
+          >
+            <SlidersHorizontal size={15} className="flex-shrink-0 text-accent" />
+            <AnimatePresence>
+              {isOpen && (
+                <motion.span
+                  initial={{ opacity: 0, width: 0 }}
+                  animate={{ opacity: 1, width: 'auto' }}
+                  exit={{ opacity: 0, width: 0 }}
+                  className="overflow-hidden whitespace-nowrap"
+                >
+                  Manage Connectors
+                </motion.span>
+              )}
+            </AnimatePresence>
+          </button>
+        </div>
+
+        {/* Bottom Bar: Settings + User Profile */}
+        <div className="border-t border-border-subtle px-2 py-2.5 space-y-1">
+          <Link
+            href="/app/settings"
+            title={!isOpen ? 'Settings' : undefined}
+            className={cn(
+              'flex items-center gap-2.5 px-2.5 py-2 rounded-btn text-xs font-medium transition-colors',
+              !isOpen && 'justify-center px-0 w-9 h-9 mx-auto',
+              isSettingsActive
+                ? 'bg-accent/10 text-accent'
+                : 'text-text-secondary hover:text-text-primary hover:bg-bg-elevated'
+            )}
+          >
+            <Settings size={15} className="flex-shrink-0" />
+            <AnimatePresence>
+              {isOpen && (
+                <motion.span
+                  initial={{ opacity: 0, width: 0 }}
+                  animate={{ opacity: 1, width: 'auto' }}
+                  exit={{ opacity: 0, width: 0 }}
+                  className="overflow-hidden whitespace-nowrap"
+                >
+                  Settings
+                </motion.span>
+              )}
+            </AnimatePresence>
+          </Link>
+
+          {/* User Profile */}
           <div
             className={cn(
-              'flex items-center gap-2 px-2.5 py-2 rounded-btn cursor-pointer hover:bg-bg-elevated transition-colors mt-2',
-              !isOpen && 'justify-center'
+              'flex items-center gap-2.5 px-2.5 py-2 rounded-btn cursor-pointer hover:bg-bg-elevated transition-colors pt-1.5',
+              !isOpen && 'justify-center px-0'
             )}
           >
             <div className="w-7 h-7 rounded-full bg-accent/20 border border-accent/30 flex items-center justify-center flex-shrink-0">
@@ -261,3 +310,4 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
     </>
   );
 }
+

@@ -1,7 +1,7 @@
 import React from 'react';
 import { X } from 'lucide-react';
 import { cn } from '@/lib/utils/cn';
-import { ProviderIcon } from './ProviderIcon';
+import { ProviderIcon } from '@/components/icons/ProviderIcon';
 import type { AIModel } from '@/types/ai';
 
 interface ModelBadgeProps {

@@ -6,9 +6,36 @@ export type ModelType = 'text' | 'image' | 'multimodal';
 
 export type ProviderID = 'openai' | 'anthropic' | 'google' | 'grok' | 'mock';
 
+/** Maps to the actual AI website — used by the browser extension */
+export type PlatformId =
+  | 'chatgpt'
+  | 'claude'
+  | 'gemini'
+  | 'grok'
+  | 'vibe'
+  | 'qwen'
+  | 'meta'
+  | 'kimi'
+  | 'copilot'
+  | 'manus'
+  | 'deepseek'
+  | 'perplexity'
+  | 'mistral';
+
+/** Maps ProviderID → PlatformId for extension routing */
+export const PROVIDER_TO_PLATFORM: Record<ProviderID, PlatformId | null> = {
+  openai:    'chatgpt',
+  anthropic: 'claude',
+  google:    'gemini',
+  grok:      'grok',
+  mock:      null,
+};
+
 export interface AIModel {
   id: string;
   provider: ProviderID;
+  /** Override: which browser platform this model maps to (defaults via PROVIDER_TO_PLATFORM) */
+  platformId?: PlatformId;
   modelKey: string;
   displayName: string;
   description?: string;
@@ -58,9 +85,13 @@ export interface AIProvider {
   isAvailable(): boolean;
 }
 
+import type { ConnectorId } from './connectors';
+
 export interface ArenaResponse {
   id: string;
-  model: AIModel;
+  connectorId: ConnectorId;
+  connectorName: string;
+  provider: string;
   status: ResponseStatus;
   content: string;
   latencyMs?: number;
@@ -68,10 +99,17 @@ export interface ArenaResponse {
   error?: string;
   startedAt?: number;
   completedAt?: number;
+  /** Legacy model reference for backward compatibility with previous stored turns */
+  model?: AIModel;
 }
 
 export interface OrchestratorOptions {
-  models: AIModel[];
+  connectorIds: ConnectorId[];
   generateOptions: GenerateOptions;
-  onUpdate: (modelKey: string, response: Partial<ArenaResponse>) => void;
+  onUpdate: (connectorId: ConnectorId, response: Partial<ArenaResponse>) => void;
+  /** Required for extension mode to correlate streaming responses */
+  conversationId?: string;
+  turnId?: string;
+  /** Legacy fallback */
+  models?: AIModel[];
 }

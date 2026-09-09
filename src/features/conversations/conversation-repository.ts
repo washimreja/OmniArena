@@ -1,4 +1,6 @@
 import type { ConversationSnapshot, StoredConversation } from './types';
+import type { ConnectorId } from '@/types/connectors';
+import { getConnector } from '@/lib/constants/connectors';
 
 export interface ConversationRepository {
   load(): ConversationSnapshot;
@@ -11,6 +13,18 @@ const ACTIVE_CONVERSATION_KEY = 'omniarena:active-conversation:v1';
 
 function isBrowser(): boolean {
   return typeof window !== 'undefined';
+}
+
+function normalizeConnectorId(raw: string | undefined): ConnectorId {
+  if (!raw) return 'chatgpt';
+  if (raw.includes('claude') || raw.includes('anthropic')) return 'claude';
+  if (raw.includes('gemini') || raw.includes('google')) return 'gemini';
+  if (raw.includes('grok')) return 'grok';
+  if (raw.includes('deepseek')) return 'deepseek';
+  if (raw.includes('mistral')) return 'mistral';
+  if (raw.includes('qwen')) return 'qwen';
+  if (raw.includes('copilot')) return 'copilot';
+  return 'chatgpt';
 }
 
 class LocalStorageConversationRepository implements ConversationRepository {
@@ -28,8 +42,27 @@ class LocalStorageConversationRepository implements ConversationRepository {
       const normalizedConversations = Array.isArray(conversations)
         ? conversations.map((conversation) => ({
           ...conversation,
+          selectedConnectorIds:
+            conversation.selectedConnectorIds ?? ['chatgpt', 'claude', 'gemini'],
           turns: Array.isArray(conversation.turns)
-            ? conversation.turns.map((turn) => ({ ...turn, preferences: turn.preferences ?? [] }))
+            ? conversation.turns.map((turn) => ({
+              ...turn,
+              selectedConnectorIds:
+                turn.selectedConnectorIds ?? ['chatgpt', 'claude', 'gemini'],
+              preferences: turn.preferences ?? [],
+              responses: Array.isArray(turn.responses)
+                ? turn.responses.map((res) => {
+                  const connectorId = res.connectorId ?? normalizeConnectorId(res.model?.modelKey || res.model?.provider);
+                  const connector = getConnector(connectorId);
+                  return {
+                    ...res,
+                    connectorId,
+                    connectorName: res.connectorName ?? connector?.name ?? 'AI Connector',
+                    provider: res.provider ?? connector?.providerName ?? 'AI Platform',
+                  };
+                })
+                : [],
+            }))
             : [],
         }))
         : [];

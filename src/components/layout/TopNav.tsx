@@ -29,16 +29,7 @@ export function TopNav({ onMenuClick, title, className }: TopNavProps) {
       </button>
 
       <div className="flex-1 min-w-0">
-        {title ? (
-          <h1 className="text-sm font-medium text-text-primary truncate">{title}</h1>
-        ) : (
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-semibold tracking-[-0.02em] text-text-primary">OmniArena</span>
-            <span className="text-[10px] uppercase tracking-wider text-text-muted px-1.5 py-0.5 bg-bg-elevated rounded-badge border border-border-subtle">
-              Beta
-            </span>
-          </div>
-        )}
+        {title && <h1 className="text-sm font-medium text-text-primary truncate">{title}</h1>}
       </div>
 
       <div className="flex items-center gap-1">

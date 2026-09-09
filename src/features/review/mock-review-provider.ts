@@ -11,9 +11,17 @@ function hash(value: string): number {
   ), 0);
 }
 
+function getConnectorKey(res: ArenaResponse): string {
+  return res.connectorId || res.model?.modelKey || 'chatgpt';
+}
+
+function getConnectorName(res: ArenaResponse): string {
+  return res.connectorName || res.model?.displayName || 'AI Platform';
+}
+
 function scoreResponse(response: ArenaResponse, prompt: string): number {
   const lengthSignal = Math.min(Math.round(response.content.length / 70), 12);
-  const modelSignal = hash(`${response.model.modelKey}:${prompt}`) % 13;
+  const modelSignal = hash(`${getConnectorKey(response)}:${prompt}`) % 13;
   return 72 + lengthSignal + modelSignal;
 }
 
@@ -39,12 +47,12 @@ function buildReviews(responses: ArenaResponse[], prompt: string): ModelReview[]
 
     return {
       id: `review-${target.id}`,
-      reviewerModelKey: reviewer.model.modelKey,
-      targetModelKey: target.model.modelKey,
+      reviewerModelKey: getConnectorKey(reviewer),
+      targetModelKey: getConnectorKey(target),
       score: scoreResponse(target, prompt),
       strengths,
       weaknesses,
-      summary: `${reviewer.model.displayName} found ${target.model.displayName} clear and useful, with a tradeoff in ${weaknesses[0].toLowerCase()}`,
+      summary: `${getConnectorName(reviewer)} found ${getConnectorName(target)} clear and structured, with a tradeoff in ${weaknesses[0].toLowerCase()}`,
     };
   });
 }
@@ -59,8 +67,8 @@ function buildVerdict(responses: ArenaResponse[], reviews: ModelReview[]): Arena
   return {
     outcome: isTie ? 'tie' : 'winner',
     bestOverallModelKey: bestReview.targetModelKey,
-    bestForQuickAnswerModelKey: quickResponse.model.modelKey,
-    bestForDeepExplanationModelKey: deepResponse.model.modelKey,
+    bestForQuickAnswerModelKey: getConnectorKey(quickResponse),
+    bestForDeepExplanationModelKey: getConnectorKey(deepResponse),
     confidence: isTie ? 'low' : bestReview.score >= 90 ? 'high' : 'medium',
     reasoning: isTie
       ? 'The leading responses make different tradeoffs well, so the best choice depends on the depth you need.'

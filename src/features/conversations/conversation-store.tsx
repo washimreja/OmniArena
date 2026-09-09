@@ -1,10 +1,11 @@
 'use client';
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { MOCK_MODELS } from '@/features/models/registry';
 import { orchestrate } from '@/lib/ai/orchestrator';
 import { generateConversationTitle } from '@/lib/utils/format';
-import type { AIModel, ArenaResponse } from '@/types/ai';
+import type { ArenaResponse } from '@/types/ai';
+import type { ConnectorId } from '@/types/connectors';
+import { getConnector } from '@/lib/constants/connectors';
 import { mockReviewProvider } from '@/features/review/mock-review-provider';
 import type { ArenaReview, PreferenceType } from '@/features/review/types';
 import { conversationRepository } from './conversation-repository';
@@ -17,7 +18,11 @@ interface ConversationStoreValue {
   createConversation: () => StoredConversation;
   getConversation: (conversationId: string) => StoredConversation | undefined;
   setActiveConversation: (conversationId: string | null) => void;
-  submitPrompt: (conversationId: string, prompt: string, selectedModelKeys: string[]) => Promise<void>;
+  submitPrompt: (
+    conversationId: string,
+    prompt: string,
+    selectedConnectorIds: ConnectorId[]
+  ) => Promise<void>;
   setResponsePreference: (
     conversationId: string,
     turnId: string,
@@ -33,10 +38,13 @@ function createId(prefix: string): string {
   return `${prefix}-${crypto.randomUUID()}`;
 }
 
-function createPendingResponse(model: AIModel, turnId: string): ArenaResponse {
+function createPendingResponse(connectorId: ConnectorId, turnId: string): ArenaResponse {
+  const connector = getConnector(connectorId);
   return {
-    id: createId(`response-${turnId}`),
-    model,
+    id: createId(`response-${turnId}-${connectorId}`),
+    connectorId,
+    connectorName: connector?.name ?? connectorId,
+    provider: connector?.providerName ?? 'AI Platform',
     status: 'waiting',
     content: '',
     startedAt: Date.now(),
@@ -66,7 +74,7 @@ export function ConversationStoreProvider({ children }: { children: React.ReactN
       title: 'New Arena',
       createdAt: now,
       updatedAt: now,
-      selectedModelKeys: [],
+      selectedConnectorIds: ['chatgpt', 'claude', 'gemini'],
       turns: [],
     };
 
@@ -113,13 +121,15 @@ export function ConversationStoreProvider({ children }: { children: React.ReactN
   );
 
   const submitPrompt = useCallback(
-    async (conversationId: string, prompt: string, selectedModelKeys: string[]) => {
+    async (
+      conversationId: string,
+      prompt: string,
+      selectedConnectorIds: ConnectorId[]
+    ) => {
       const trimmedPrompt = prompt.trim();
-      const selectedModels = selectedModelKeys
-        .map((modelKey) => MOCK_MODELS.find((model) => model.modelKey === modelKey))
-        .filter((model): model is AIModel => Boolean(model));
+      const validConnectorIds = selectedConnectorIds.filter((id): id is ConnectorId => Boolean(getConnector(id)));
 
-      if (!trimmedPrompt || selectedModels.length === 0) return;
+      if (!trimmedPrompt || validConnectorIds.length === 0) return;
 
       const turnId = createId('turn');
       const createdAt = new Date().toISOString();
@@ -128,13 +138,14 @@ export function ConversationStoreProvider({ children }: { children: React.ReactN
         conversationId,
         prompt: trimmedPrompt,
         attachments: [],
-        selectedModelKeys: selectedModels.map((model) => model.modelKey),
-        responses: selectedModels.map((model) => createPendingResponse(model, turnId)),
+        selectedConnectorIds: validConnectorIds,
+        responses: validConnectorIds.map((connectorId) => createPendingResponse(connectorId, turnId)),
         preferences: [],
         createdAt,
       };
+
       const streamedResponses = new Map(
-        turn.responses.map((response) => [response.model.modelKey, response])
+        turn.responses.map((response) => [response.connectorId, response])
       );
 
       setConversations((current) => {
@@ -146,7 +157,7 @@ export function ConversationStoreProvider({ children }: { children: React.ReactN
             ...conversation,
             title: isFirstTurn ? generateConversationTitle(trimmedPrompt) : conversation.title,
             updatedAt: createdAt,
-            selectedModelKeys: turn.selectedModelKeys,
+            selectedConnectorIds: turn.selectedConnectorIds,
             turns: [...conversation.turns, turn],
           };
         });
@@ -158,17 +169,19 @@ export function ConversationStoreProvider({ children }: { children: React.ReactN
       });
 
       await orchestrate({
-        models: selectedModels,
+        connectorIds: validConnectorIds,
         generateOptions: { prompt: trimmedPrompt },
-        onUpdate: (modelKey, responseUpdate) => {
-          const currentResponse = streamedResponses.get(modelKey);
+        conversationId,
+        turnId,
+        onUpdate: (connectorId, responseUpdate) => {
+          const currentResponse = streamedResponses.get(connectorId);
           if (currentResponse) {
-            streamedResponses.set(modelKey, { ...currentResponse, ...responseUpdate });
+            streamedResponses.set(connectorId, { ...currentResponse, ...responseUpdate });
           }
           updateTurn(conversationId, turnId, (currentTurn) => ({
             ...currentTurn,
             responses: currentTurn.responses.map((response) =>
-              response.model.modelKey === modelKey
+              response.connectorId === connectorId
                 ? { ...response, ...responseUpdate }
                 : response
             ),

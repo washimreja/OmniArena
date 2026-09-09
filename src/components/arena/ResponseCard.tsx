@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Copy, Maximize2, Heart, MoreHorizontal, CheckCheck, RefreshCw, ThumbsDown, ThumbsUp } from 'lucide-react';
 import { cn } from '@/lib/utils/cn';
-import { ProviderIcon } from '@/components/models/ProviderIcon';
+import { ConnectorIcon } from '@/components/icons/ConnectorIcon';
 import { ResponseStatusIndicator } from './ResponseStatus';
 import { SkeletonText } from '@/components/ui/skeleton';
 import { Tooltip } from '@/components/ui/tooltip';
@@ -12,6 +12,8 @@ import { useCopyToClipboard } from '@/hooks/use-copy-to-clipboard';
 import { formatLatency, formatTokens } from '@/lib/utils/format';
 import type { ArenaResponse } from '@/types/ai';
 import type { PreferenceType, ResponsePreference } from '@/features/review/types';
+import { getConnector } from '@/lib/constants/connectors';
+import type { ConnectorId } from '@/types/connectors';
 
 interface ResponseCardProps {
   response: ArenaResponse;
@@ -20,10 +22,28 @@ interface ResponseCardProps {
   className?: string;
 }
 
+function resolveConnectorId(response: ArenaResponse): ConnectorId {
+  if (response.connectorId) return response.connectorId;
+  const raw = response.model?.modelKey || response.model?.provider || '';
+  if (raw.includes('claude') || raw.includes('anthropic')) return 'claude';
+  if (raw.includes('gemini') || raw.includes('google')) return 'gemini';
+  if (raw.includes('grok')) return 'grok';
+  if (raw.includes('deepseek')) return 'deepseek';
+  if (raw.includes('mistral')) return 'mistral';
+  if (raw.includes('qwen')) return 'qwen';
+  if (raw.includes('copilot')) return 'copilot';
+  return 'chatgpt';
+}
+
 export function ResponseCard({ response, preferences, onPreference, className }: ResponseCardProps) {
   const { copied, copy } = useCopyToClipboard();
   const [expanded, setExpanded] = useState(false);
-  const { model, status, content, latencyMs, tokenCount, error } = response;
+  const { status, content, latencyMs, tokenCount, error } = response;
+
+  const connectorId = resolveConnectorId(response);
+  const connector = getConnector(connectorId);
+  const displayName = response.connectorName || connector?.name || response.model?.displayName || 'AI';
+  const providerName = response.provider || connector?.providerName || response.model?.provider || 'AI Platform';
 
   const isLoading = status === 'waiting' || (status === 'generating' && !content);
   const hasPreference = (type: PreferenceType) => preferences.some((preference) => preference.type === type);
@@ -35,27 +55,31 @@ export function ResponseCard({ response, preferences, onPreference, className }:
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
       className={cn(
-        'card-surface flex flex-col overflow-hidden transition-shadow hover:border-border-strong',
+        'card-surface flex flex-col overflow-hidden transition-all duration-200 hover:border-border-strong rounded-xl border border-border-default',
         hasPreference('preferred') && 'border-accent/40 shadow-lg shadow-accent/10',
         className
       )}
     >
-      {/* Card Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border-subtle">
+      {/* Card Header — One Connector = One AI Platform */}
+      <div className="flex items-center justify-between px-4 py-3 border-b border-border-subtle bg-bg-surface/50">
         <div className="flex items-center gap-2.5">
-          <ProviderIcon provider={model.provider} size="sm" />
+          <ConnectorIcon connectorId={connectorId} size="sm" />
           <div>
             <p className="text-sm font-semibold text-text-primary leading-none">
-              {model.displayName}
+              {displayName}
             </p>
-            <p className="text-[10px] text-text-muted capitalize mt-0.5">
-              {model.provider}
+            <p className="text-[10px] text-text-muted mt-0.5">
+              {providerName}
             </p>
           </div>
         </div>
         <div className="flex items-center gap-2">
           <ResponseStatusIndicator status={status} />
-          <button className="text-text-muted hover:text-text-primary transition-colors">
+          <button
+            type="button"
+            className="text-text-muted hover:text-text-primary transition-colors p-1 rounded hover:bg-bg-elevated"
+            aria-label="More options"
+          >
             <MoreHorizontal size={15} />
           </button>
         </div>
@@ -98,102 +122,75 @@ export function ResponseCard({ response, preferences, onPreference, className }:
               key={content.length > 0 ? 'content' : 'empty'}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="whitespace-pre-wrap font-sans"
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="prose prose-invert prose-sm max-w-none space-y-2 whitespace-pre-wrap font-sans text-[13px] leading-relaxed"
             >
-              {content || <span className="text-text-muted italic">Waiting for response…</span>}
-              {status === 'generating' && (
-                <span className="inline-block w-0.5 h-4 bg-accent ml-0.5 animate-pulse" />
-              )}
+              {content}
             </motion.div>
           </AnimatePresence>
         )}
       </div>
 
       {/* Card Footer */}
-      <div className="flex items-center justify-between px-4 py-2.5 border-t border-border-subtle">
-        {/* Metadata */}
-        <div className="flex items-center gap-3 text-[10px] text-text-muted">
-          {latencyMs && <span>{formatLatency(latencyMs)}</span>}
-          {tokenCount && <span>{formatTokens(tokenCount)}</span>}
+      <div className="flex items-center justify-between px-4 py-2 border-t border-border-subtle text-xs text-text-muted bg-bg-surface/30">
+        <div className="flex items-center gap-3">
+          {latencyMs !== undefined && <span>{formatLatency(latencyMs)}</span>}
+          {tokenCount !== undefined && <span>{formatTokens(tokenCount)}</span>}
         </div>
 
-        {/* Actions */}
-        <div className="flex items-center gap-0.5">
-          <Tooltip content={copied ? 'Copied!' : 'Copy response'}>
+        <div className="flex items-center gap-1">
+          <Tooltip content="Helpful">
             <button
-              onClick={() => copy(content)}
-              disabled={!content}
+              onClick={() => onPreference(response.id, 'helpful')}
               className={cn(
-                'flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-xs transition-all',
-                copied
-                  ? 'text-status-success'
-                  : 'text-text-muted hover:text-text-primary hover:bg-bg-elevated',
-                !content && 'opacity-30'
+                'p-1.5 rounded text-text-muted hover:text-text-primary hover:bg-bg-elevated transition-colors',
+                hasPreference('helpful') && 'text-accent bg-accent/10'
               )}
             >
-              {copied ? <CheckCheck size={13} /> : <Copy size={13} />}
+              <ThumbsUp size={13} />
             </button>
           </Tooltip>
 
-          <Tooltip content={expanded ? 'Collapse' : 'Expand'}>
+          <Tooltip content="Not helpful">
             <button
-              onClick={() => setExpanded((prev) => !prev)}
-              disabled={!content}
+              onClick={() => onPreference(response.id, 'not_helpful')}
               className={cn(
-                'flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-xs transition-all',
-                expanded
-                  ? 'text-accent bg-accent/10'
-                  : 'text-text-muted hover:text-text-primary hover:bg-bg-elevated',
-                !content && 'opacity-30'
+                'p-1.5 rounded text-text-muted hover:text-text-primary hover:bg-bg-elevated transition-colors',
+                hasPreference('not_helpful') && 'text-status-error bg-status-error/10'
               )}
             >
-              <Maximize2 size={13} />
+              <ThumbsDown size={13} />
             </button>
           </Tooltip>
 
-          <Tooltip content={hasPreference('preferred') ? 'Preferred response' : 'Prefer this response'}>
+          <Tooltip content="Mark as preferred response">
             <button
               onClick={() => onPreference(response.id, 'preferred')}
-              disabled={!content || status !== 'completed'}
               className={cn(
-                'flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-xs transition-all',
-                hasPreference('preferred')
-                  ? 'text-status-error'
-                  : 'text-text-muted hover:text-status-error hover:bg-status-error/10',
-                (!content || status !== 'completed') && 'opacity-30'
+                'p-1.5 rounded text-text-muted hover:text-text-primary hover:bg-bg-elevated transition-colors',
+                hasPreference('preferred') && 'text-rose-400 bg-rose-400/10'
               )}
             >
               <Heart size={13} className={cn(hasPreference('preferred') && 'fill-current')} />
             </button>
           </Tooltip>
 
-          <Tooltip content={hasPreference('helpful') ? 'Marked helpful' : 'Mark helpful'}>
+          <Tooltip content={copied ? 'Copied!' : 'Copy response'}>
             <button
-              onClick={() => onPreference(response.id, 'helpful')}
-              disabled={!content || status !== 'completed'}
-              className={cn(
-                'flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-xs transition-all',
-                hasPreference('helpful') ? 'text-status-success' : 'text-text-muted hover:text-status-success hover:bg-status-success/10',
-                (!content || status !== 'completed') && 'opacity-30'
-              )}
-              aria-label="Mark response helpful"
+              onClick={() => copy(content)}
+              className="p-1.5 rounded text-text-muted hover:text-text-primary hover:bg-bg-elevated transition-colors"
             >
-              <ThumbsUp size={13} className={cn(hasPreference('helpful') && 'fill-current')} />
+              {copied ? <CheckCheck size={13} className="text-status-success" /> : <Copy size={13} />}
             </button>
           </Tooltip>
 
-          <Tooltip content={hasPreference('not_helpful') ? 'Marked not helpful' : 'Mark not helpful'}>
+          <Tooltip content={expanded ? 'Collapse' : 'Expand'}>
             <button
-              onClick={() => onPreference(response.id, 'not_helpful')}
-              disabled={!content || status !== 'completed'}
-              className={cn(
-                'flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-xs transition-all',
-                hasPreference('not_helpful') ? 'text-status-warning' : 'text-text-muted hover:text-status-warning hover:bg-status-warning/10',
-                (!content || status !== 'completed') && 'opacity-30'
-              )}
-              aria-label="Mark response not helpful"
+              onClick={() => setExpanded(!expanded)}
+              className="p-1.5 rounded text-text-muted hover:text-text-primary hover:bg-bg-elevated transition-colors"
             >
-              <ThumbsDown size={13} className={cn(hasPreference('not_helpful') && 'fill-current')} />
+              <Maximize2 size={13} />
             </button>
           </Tooltip>
         </div>

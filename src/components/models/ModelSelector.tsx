@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown, Check, Cpu } from 'lucide-react';
 import { cn } from '@/lib/utils/cn';
 import { PROVIDERS_ORDER, PROVIDER_DISPLAY, getModelsByProvider } from '@/features/models/registry';
-import { ProviderIcon } from './ProviderIcon';
+import { ProviderIcon } from '@/components/icons/ProviderIcon';
 
 interface ModelSelectorProps {
   selectedKeys: string[];

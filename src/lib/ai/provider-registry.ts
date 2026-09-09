@@ -1,5 +1,5 @@
 import type { AIProvider, ProviderID } from '@/types/ai';
-import { MockProvider } from './providers/mock';
+import { mockProvider } from './providers/mock';
 
 export type ProviderResolutionErrorCode =
   | 'unknown_provider'
@@ -73,5 +73,5 @@ export const registry = new ProviderRegistry();
 
 // Until real adapters are added, every supported provider key uses the isolated mock adapter.
 (['openai', 'anthropic', 'google', 'grok'] as const).forEach((providerId) => {
-  registry.register(MockProvider, providerId);
+  registry.register(mockProvider, providerId);
 });

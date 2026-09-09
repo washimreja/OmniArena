@@ -4,21 +4,19 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { PromptComposer } from '@/components/chat/PromptComposer';
 import { SuggestedPrompts } from './SuggestedPrompts';
-import type { AIModel } from '@/types/ai';
+import type { OmniConnector, ConnectorId } from '@/types/connectors';
 
 interface EmptyStateProps {
-  selectedModels: AIModel[];
-  selectedKeys: string[];
-  onToggleModel: (key: string) => void;
-  onRemoveModel: (key: string) => void;
+  activeConnectors: OmniConnector[];
+  onRemoveConnector: (id: ConnectorId) => void;
+  onOpenManageConnectors: () => void;
   onSubmit: (prompt: string) => void;
 }
 
 export function EmptyState({
-  selectedModels,
-  selectedKeys,
-  onToggleModel,
-  onRemoveModel,
+  activeConnectors,
+  onRemoveConnector,
+  onOpenManageConnectors,
   onSubmit,
 }: EmptyStateProps) {
   return (
@@ -48,10 +46,10 @@ export function EmptyState({
         <h1 className="text-4xl sm:text-5xl font-bold text-text-primary leading-[1.1] tracking-tight mb-4">
           One Question.
           <br />
-          <span className="text-gradient-accent">Every Intelligence.</span>
+          <span className="text-gradient-accent">Every AI Account.</span>
         </h1>
         <p className="text-base text-text-secondary leading-relaxed max-w-sm mx-auto">
-          Ask once. Compare responses from the world&apos;s leading AI models, side by side in the Arena.
+          Ask once. Broadcast directly to your logged-in ChatGPT, Claude, and Gemini accounts in the Arena.
         </p>
       </motion.div>
 
@@ -64,10 +62,9 @@ export function EmptyState({
       >
         <PromptComposer
           onSubmit={onSubmit}
-          selectedModels={selectedModels}
-          selectedKeys={selectedKeys}
-          onToggleModel={onToggleModel}
-          onRemoveModel={onRemoveModel}
+          activeConnectors={activeConnectors}
+          onRemoveConnector={onRemoveConnector}
+          onOpenManageConnectors={onOpenManageConnectors}
         />
       </motion.div>
 
