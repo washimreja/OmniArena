@@ -22,6 +22,10 @@ export interface StoredConversation {
   title: string;
   createdAt: string;
   updatedAt: string;
+  /** Pinned conversations float to the top of the sidebar in a dedicated section. */
+  isPinned?: boolean;
+  /** Set when pinned; used to sort pinned conversations among themselves. */
+  pinnedAt?: string | null;
   selectedConnectorIds: ConnectorId[];
   /** Optional legacy keys */
   selectedModelKeys?: string[];

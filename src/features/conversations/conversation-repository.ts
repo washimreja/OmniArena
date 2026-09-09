@@ -42,6 +42,8 @@ class LocalStorageConversationRepository implements ConversationRepository {
       const normalizedConversations = Array.isArray(conversations)
         ? conversations.map((conversation) => ({
           ...conversation,
+          isPinned: conversation.isPinned ?? false,
+          pinnedAt: conversation.pinnedAt ?? null,
           selectedConnectorIds:
             conversation.selectedConnectorIds ?? ['chatgpt', 'claude', 'gemini'],
           turns: Array.isArray(conversation.turns)

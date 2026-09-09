@@ -2,6 +2,7 @@
 
 import React, { useEffect, useCallback } from 'react';
 import { use } from 'react';
+import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArenaGrid } from '@/components/arena/ArenaGrid';
 import { PromptComposer } from '@/components/chat/PromptComposer';
@@ -25,6 +26,7 @@ export default function ChatPage({ params }: PageProps) {
     submitPrompt,
   } = useConversationStore();
 
+  const router = useRouter();
   const conversation = getConversation(conversationId);
   const isRunning = isConversationRunning(conversationId);
 
@@ -35,6 +37,13 @@ export default function ChatPage({ params }: PageProps) {
   useEffect(() => {
     setActiveConversation(conversationId);
   }, [conversationId, setActiveConversation]);
+
+  // The open conversation was removed (e.g. deleted via the sidebar) → fresh empty Arena.
+  useEffect(() => {
+    if (hydrated && !conversation) {
+      router.replace('/app');
+    }
+  }, [hydrated, conversation, router]);
 
   const handleSubmit = useCallback((prompt: string) => {
     void submitPrompt(conversationId, prompt, activeConnectorIds);

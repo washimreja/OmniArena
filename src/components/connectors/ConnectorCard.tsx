@@ -1,131 +1,82 @@
 'use client';
 
 import React from 'react';
-import { ExternalLink, Check, Plus } from 'lucide-react';
+import { Check } from 'lucide-react';
 import { cn } from '@/lib/utils/cn';
 import type { OmniConnector } from '@/types/connectors';
 import { ConnectorIcon } from '@/components/icons/ConnectorIcon';
-import { ConnectorStatusDot } from './ConnectorStatusDot';
 import { useConnectors } from '@/features/connectors/connector-context';
 
 interface ConnectorCardProps {
   connector: OmniConnector;
 }
 
+/**
+ * Minimal connector row: logo, name, company — and a single action.
+ * No wave badges, no marketing copy, no category labels.
+ * Connection status (● Connected / Connect / Coming Soon) and Arena
+ * selection (✓) are the only signals shown.
+ */
 export function ConnectorCard({ connector }: ConnectorCardProps) {
-  const {
-    getConnectorStatus,
-    isConnectorActive,
-    toggleConnector,
-    connectAccount,
-  } = useConnectors();
+  const { getConnectorStatus, isConnectorActive, toggleConnector, connectAccount } =
+    useConnectors();
 
   const status = getConnectorStatus(connector.id);
   const isActive = isConnectorActive(connector.id);
   const isConnected = status === 'connected';
-  const isWave1 = connector.wave === 1;
+  const isComingSoon = status === 'coming_soon' || connector.isComingSoon;
 
   return (
     <div
       className={cn(
-        'group relative flex flex-col justify-between p-4 rounded-xl border transition-all duration-200',
-        isActive && isConnected
-          ? 'bg-bg-elevated/70 border-border-strong shadow-[0_4px_20px_rgba(0,0,0,0.3)]'
-          : 'bg-bg-surface/50 border-border-subtle hover:border-border-default hover:bg-bg-surface'
+        'flex items-center gap-3.5 rounded-xl border px-4 py-3.5 transition-colors duration-150',
+        isActive
+          ? 'border-border-default bg-bg-elevated/60'
+          : 'border-border-subtle bg-bg-surface/40 hover:border-border-default hover:bg-bg-surface'
       )}
     >
-      {/* Top row: Icon + Names + Wave Badge */}
-      <div className="flex items-start justify-between gap-3 mb-3">
-        <div className="flex items-center gap-3 min-w-0">
-          <ConnectorIcon connectorId={connector.id} size="md" />
-          <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <h3 className="text-sm font-semibold text-text-primary truncate">
-                {connector.name}
-              </h3>
-              <span className="text-[10px] text-text-muted px-1.5 py-0.5 rounded bg-bg-elevated border border-border-subtle">
-                {connector.providerName}
-              </span>
-            </div>
-            <p className="text-[11px] text-text-muted truncate mt-0.5">
-              {connector.category}
-            </p>
-          </div>
-        </div>
+      {/* Logo */}
+      <ConnectorIcon connectorId={connector.id} size="md" />
 
-        {/* Wave indicator badge */}
-        <span
-          className={cn(
-            'text-[10px] font-semibold px-2 py-0.5 rounded-full uppercase tracking-wider flex-shrink-0',
-            connector.wave === 1
-              ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
-              : connector.wave === 2
-              ? 'bg-sky-500/10 text-sky-400 border border-sky-500/30'
-              : 'bg-purple-500/10 text-purple-400 border border-purple-500/30'
-          )}
-        >
-          {isWave1 ? 'Live' : `Wave ${connector.wave}`}
-        </span>
+      {/* Name + company */}
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-medium text-text-primary">{connector.name}</p>
+        <p className="mt-0.5 truncate text-[11px] text-text-muted">{connector.providerName}</p>
       </div>
 
-      {/* Description */}
-      <p className="text-xs text-text-secondary line-clamp-2 mb-4 leading-relaxed">
-        {connector.description}
-      </p>
-
-      {/* Bottom controls */}
-      <div className="flex items-center justify-between pt-3 border-t border-border-subtle gap-2">
-        {/* Status dot */}
-        <div className="flex items-center gap-2">
-          <ConnectorStatusDot status={status} showLabel size="sm" />
-        </div>
-
-        {/* Action button */}
-        <div className="flex items-center gap-1.5">
-          {/* Open Account Website button */}
+      {/* Single right-side action / status */}
+      {isConnected ? (
+        <div className="flex flex-shrink-0 items-center gap-2.5">
+          <span className="flex items-center gap-1.5 text-[11px] font-medium text-emerald-400">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+            Connected
+          </span>
           <button
             type="button"
-            onClick={() => connectAccount(connector.id)}
-            title={`Open ${connector.name} in new tab to log in`}
-            className="inline-flex items-center gap-1 text-[11px] font-medium text-text-muted hover:text-text-primary px-2 py-1 rounded bg-bg-elevated hover:bg-bg-hover transition-colors"
+            onClick={() => toggleConnector(connector.id)}
+            aria-pressed={isActive}
+            title={isActive ? 'In the Arena — click to remove' : 'Add to the Arena'}
+            className={cn(
+              'flex h-5 w-5 items-center justify-center rounded-[5px] border transition-colors',
+              isActive
+                ? 'border-accent bg-accent text-white'
+                : 'border-border-strong text-transparent hover:border-accent/60'
+            )}
           >
-            <span>{isConnected ? 'Open Tab' : 'Connect'}</span>
-            <ExternalLink size={11} className="opacity-70" />
+            <Check size={11} strokeWidth={3} />
           </button>
-
-          {/* Arena prompt toggle */}
-          {connector.supported && (
-            <button
-              type="button"
-              onClick={() => toggleConnector(connector.id)}
-              className={cn(
-                'inline-flex items-center gap-1 text-[11px] font-medium px-2.5 py-1 rounded-md transition-all',
-                isActive
-                  ? 'bg-accent text-white shadow-[0_0_12px_rgba(124,58,237,0.4)]'
-                  : 'bg-bg-elevated text-text-secondary hover:text-text-primary hover:bg-bg-hover'
-              )}
-            >
-              {isActive ? (
-                <>
-                  <Check size={12} />
-                  <span>Active</span>
-                </>
-              ) : (
-                <>
-                  <Plus size={12} />
-                  <span>Add to Arena</span>
-                </>
-              )}
-            </button>
-          )}
-
-          {!connector.supported && (
-            <span className="text-[10px] text-text-muted italic px-2 py-1">
-              Coming Soon
-            </span>
-          )}
         </div>
-      </div>
+      ) : isComingSoon ? (
+        <span className="flex-shrink-0 text-[11px] text-text-muted">Coming Soon</span>
+      ) : (
+        <button
+          type="button"
+          onClick={() => connectAccount(connector.id)}
+          className="flex-shrink-0 rounded-badge border border-border-default px-3 py-1 text-[11px] font-medium text-text-secondary transition-colors hover:border-accent/50 hover:text-accent"
+        >
+          Connect
+        </button>
+      )}
     </div>
   );
 }

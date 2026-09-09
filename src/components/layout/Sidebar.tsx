@@ -6,13 +6,16 @@ import { usePathname, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus, MessageSquare, Compass, Settings,
-  ChevronLeft, ChevronRight, Search, Clock, SlidersHorizontal
+  ChevronLeft, ChevronRight, Search, SlidersHorizontal
 } from 'lucide-react';
 import { cn } from '@/lib/utils/cn';
-import { truncate, groupByDate } from '@/lib/utils/format';
+import { groupByDate } from '@/lib/utils/format';
 import { BrandMark } from './BrandMark';
 import { useConversationStore } from '@/features/conversations/conversation-store';
 import { useConnectors } from '@/features/connectors/connector-context';
+import { ConversationItem } from '@/components/conversations/ConversationItem';
+import { DeleteConversationDialog } from '@/components/conversations/DeleteConversationDialog';
+import type { ConversationMenuAction } from '@/components/conversations/ConversationItem';
 import type { StoredConversation } from '@/features/conversations/types';
 
 interface SidebarProps {
@@ -28,38 +31,31 @@ function OmniArenaLogo({ collapsed }: { collapsed: boolean }) {
   );
 }
 
-function ConversationGroup({ label, conversations, collapsed }: {
+function ConversationGroup({ label, conversations, collapsed, onAction, renamingId, onRenameSubmit, onRenameCancel }: {
   label: string;
   conversations: StoredConversation[];
   collapsed: boolean;
+  onAction: (action: ConversationMenuAction, conversation: StoredConversation) => void;
+  renamingId: string | null;
+  onRenameSubmit: (conversationId: string, title: string) => void;
+  onRenameCancel: () => void;
 }) {
-  const pathname = usePathname();
   if (collapsed) return null;
   return (
     <div className="mb-1">
       <p className="px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-text-muted">
         {label}
       </p>
-      {conversations.map((conv) => {
-        const isActive = pathname === `/app/chat/${conv.id}`;
-        return (
-          <Link
-            key={conv.id}
-            href={`/app/chat/${conv.id}`}
-            className={cn(
-              'flex items-center gap-2 px-3 py-2 mx-1 rounded-lg text-sm transition-colors group',
-              isActive
-                ? 'bg-accent/10 text-accent'
-                : 'text-text-secondary hover:text-text-primary hover:bg-bg-elevated'
-            )}
-          >
-            <Clock size={13} className="flex-shrink-0 opacity-50" />
-            <span className="truncate text-xs leading-snug">
-              {truncate(conv.title, 38)}
-            </span>
-          </Link>
-        );
-      })}
+      {conversations.map((conv) => (
+        <ConversationItem
+          key={conv.id}
+          conversation={conv}
+          onAction={onAction}
+          renaming={renamingId === conv.id}
+          onRenameSubmit={(title) => onRenameSubmit(conv.id, title)}
+          onRenameCancel={onRenameCancel}
+        />
+      ))}
     </div>
   );
 }
@@ -67,9 +63,17 @@ function ConversationGroup({ label, conversations, collapsed }: {
 export function Sidebar({ isOpen, onToggle }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const { conversations, createConversation } = useConversationStore();
+  const {
+    conversations,
+    createConversation,
+    renameConversation,
+    setConversationPinned,
+    deleteConversation,
+  } = useConversationStore();
   const { openModal } = useConnectors();
   const [search, setSearch] = useState('');
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<StoredConversation | null>(null);
 
   const filteredConversations = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -77,11 +81,53 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
     return conversations.filter((conversation) => conversation.title.toLowerCase().includes(query));
   }, [conversations, search]);
 
-  const groups = groupByDate(filteredConversations);
+  // Pinned conversations float above the chronological groups.
+  const pinnedConversations = useMemo(
+    () => filteredConversations.filter((conversation) => conversation.isPinned),
+    [filteredConversations]
+  );
+  const unpinnedConversations = useMemo(
+    () => filteredConversations.filter((conversation) => !conversation.isPinned),
+    [filteredConversations]
+  );
+  const groups = groupByDate(unpinnedConversations);
 
   const handleNewArena = () => {
     const conversation = createConversation();
     router.push(`/app/chat/${conversation.id}`);
+  };
+
+  const handleConversationAction = (action: ConversationMenuAction, conversation: StoredConversation) => {
+    switch (action) {
+      case 'rename':
+        setRenamingId(conversation.id);
+        break;
+      case 'pin':
+        setConversationPinned(conversation.id, true);
+        break;
+      case 'unpin':
+        setConversationPinned(conversation.id, false);
+        break;
+      case 'delete':
+        setPendingDelete(conversation);
+        break;
+    }
+  };
+
+  const handleRenameSubmit = (conversationId: string, title: string) => {
+    renameConversation(conversationId, title);
+    setRenamingId(null);
+  };
+
+  const handleDeleteConfirm = () => {
+    if (!pendingDelete) return;
+    const wasActive = pathname === `/app/chat/${pendingDelete.id}`;
+    deleteConversation(pendingDelete.id);
+    setPendingDelete(null);
+    if (wasActive) {
+      // Deleted the open Arena → fall back to a fresh empty one.
+      router.replace('/app');
+    }
   };
 
   const isModelsActive = pathname.startsWith('/app/models');
@@ -173,12 +219,27 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
               >
+                {pinnedConversations.length > 0 && (
+                  <ConversationGroup
+                    label="Pinned"
+                    conversations={pinnedConversations}
+                    collapsed={!isOpen}
+                    onAction={handleConversationAction}
+                    renamingId={renamingId}
+                    onRenameSubmit={handleRenameSubmit}
+                    onRenameCancel={() => setRenamingId(null)}
+                  />
+                )}
                 {Object.entries(groups).map(([label, convs]) => (
                   <ConversationGroup
                     key={label}
                     label={label}
                     conversations={convs}
                     collapsed={!isOpen}
+                    onAction={handleConversationAction}
+                    renamingId={renamingId}
+                    onRenameSubmit={handleRenameSubmit}
+                    onRenameCancel={() => setRenamingId(null)}
                   />
                 ))}
               </motion.div>
@@ -307,6 +368,15 @@ export function Sidebar({ isOpen, onToggle }: SidebarProps) {
           </div>
         </div>
       </motion.aside>
+
+      {/* Delete confirmation — nothing is removed without explicit confirm */}
+      {pendingDelete && (
+        <DeleteConversationDialog
+          conversationTitle={pendingDelete.title}
+          onConfirm={handleDeleteConfirm}
+          onCancel={() => setPendingDelete(null)}
+        />
+      )}
     </>
   );
 }

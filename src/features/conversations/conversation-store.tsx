@@ -18,6 +18,9 @@ interface ConversationStoreValue {
   createConversation: () => StoredConversation;
   getConversation: (conversationId: string) => StoredConversation | undefined;
   setActiveConversation: (conversationId: string | null) => void;
+  renameConversation: (conversationId: string, title: string) => void;
+  setConversationPinned: (conversationId: string, pinned: boolean) => void;
+  deleteConversation: (conversationId: string) => void;
   submitPrompt: (
     conversationId: string,
     prompt: string,
@@ -34,8 +37,31 @@ interface ConversationStoreValue {
 
 const ConversationStoreContext = createContext<ConversationStoreValue | null>(null);
 
+/** Maximum number of conversations that can be pinned at once. */
+export const MAX_PINNED_CONVERSATIONS = 5;
+
+/** Longest allowed conversation title (rename clamps to this). */
+export const MAX_CONVERSATION_TITLE_LENGTH = 50;
+
 function createId(prefix: string): string {
   return `${prefix}-${crypto.randomUUID()}`;
+}
+
+/**
+ * Sidebar ordering: pinned conversations first (most recently pinned on top),
+ * then everything else by updatedAt descending.
+ */
+function sortConversations(conversations: StoredConversation[]): StoredConversation[] {
+  return [...conversations].sort((a, b) => {
+    const pinnedDiff = Number(b.isPinned ?? false) - Number(a.isPinned ?? false);
+    if (pinnedDiff !== 0) return pinnedDiff;
+    if (a.isPinned && b.isPinned) {
+      const pinnedTimeDiff =
+        new Date(b.pinnedAt ?? 0).getTime() - new Date(a.pinnedAt ?? 0).getTime();
+      if (pinnedTimeDiff !== 0) return pinnedTimeDiff;
+    }
+    return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+  });
 }
 
 function createPendingResponse(connectorId: ConnectorId, turnId: string): ArenaResponse {
@@ -98,6 +124,57 @@ export function ConversationStoreProvider({ children }: { children: React.ReactN
     conversationRepository.saveActiveConversationId(conversationId);
   }, []);
 
+  const renameConversation = useCallback((conversationId: string, title: string) => {
+    const trimmed = title.trim().slice(0, MAX_CONVERSATION_TITLE_LENGTH);
+    if (!trimmed) return;
+
+    setConversations((current) => {
+      const next = current.map((conversation) =>
+        conversation.id === conversationId
+          ? { ...conversation, title: trimmed }
+          : conversation
+      );
+      conversationRepository.save(next);
+      return next;
+    });
+  }, []);
+
+  const setConversationPinned = useCallback((conversationId: string, pinned: boolean) => {
+    setConversations((current) => {
+      const pinnedCount = current.filter((conversation) => conversation.isPinned).length;
+      if (pinned && pinnedCount >= MAX_PINNED_CONVERSATIONS) return current;
+
+      const next = sortConversations(
+        current.map((conversation) =>
+          conversation.id === conversationId
+            ? {
+              ...conversation,
+              isPinned: pinned,
+              pinnedAt: pinned ? new Date().toISOString() : null,
+            }
+            : conversation
+        )
+      );
+      conversationRepository.save(next);
+      return next;
+    });
+  }, []);
+
+  const deleteConversation = useCallback((conversationId: string) => {
+    setConversations((current) => {
+      const next = current.filter((conversation) => conversation.id !== conversationId);
+      conversationRepository.save(next);
+      return next;
+    });
+
+    // If the deleted conversation was open, fall back to a fresh empty Arena.
+    setActiveConversationId((currentActive) => {
+      if (currentActive !== conversationId) return currentActive;
+      conversationRepository.saveActiveConversationId(null);
+      return null;
+    });
+  }, []);
+
   const updateTurn = useCallback(
     (conversationId: string, turnId: string, update: (turn: ConversationTurn) => ConversationTurn) => {
       setConversations((current) => {
@@ -110,9 +187,7 @@ export function ConversationStoreProvider({ children }: { children: React.ReactN
             turns: conversation.turns.map((turn) => (turn.id === turnId ? update(turn) : turn)),
           };
         });
-        const sorted = [...next].sort(
-          (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
-        );
+        const sorted = sortConversations(next);
         conversationRepository.save(sorted);
         return sorted;
       });
@@ -161,9 +236,7 @@ export function ConversationStoreProvider({ children }: { children: React.ReactN
             turns: [...conversation.turns, turn],
           };
         });
-        const sorted = [...next].sort(
-          (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
-        );
+        const sorted = sortConversations(next);
         conversationRepository.save(sorted);
         return sorted;
       });
@@ -265,6 +338,9 @@ export function ConversationStoreProvider({ children }: { children: React.ReactN
       createConversation,
       getConversation,
       setActiveConversation,
+      renameConversation,
+      setConversationPinned,
+      deleteConversation,
       setResponsePreference,
       submitPrompt,
       isConversationRunning,
@@ -273,10 +349,13 @@ export function ConversationStoreProvider({ children }: { children: React.ReactN
       activeConversationId,
       conversations,
       createConversation,
+      deleteConversation,
       getConversation,
       hydrated,
       isConversationRunning,
+      renameConversation,
       setActiveConversation,
+      setConversationPinned,
       setResponsePreference,
       submitPrompt,
     ]
