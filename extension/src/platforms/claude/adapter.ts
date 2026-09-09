@@ -20,17 +20,17 @@ export class ClaudeAdapter implements AIPlatformAdapter {
   }
 
   async sendPrompt(prompt: string): Promise<void> {
-    const inputEl = document.querySelector<HTMLElement>(CLAUDE_SELECTORS.input) ?? document.querySelector<HTMLElement>(CLAUDE_SELECTORS.inputFallback);
+    const inputEl = document.querySelector(CLAUDE_SELECTORS.input) ?? document.querySelector(CLAUDE_SELECTORS.inputFallback);
     if (!inputEl) throw new Error('Claude: input not found');
     inputEl.focus();
     document.execCommand('selectAll', false);
     document.execCommand('insertText', false, prompt);
     inputEl.dispatchEvent(new InputEvent('input', { bubbles: true }));
 
-    await new Promise<void>((resolve, reject) => {
+    await new Promise((resolve, reject) => {
       let elapsed = 0;
       const iv = setInterval(() => {
-        const btn = document.querySelector<HTMLButtonElement>(CLAUDE_SELECTORS.sendButton) ?? document.querySelector<HTMLButtonElement>(CLAUDE_SELECTORS.sendButtonFallback);
+        const btn = document.querySelector(CLAUDE_SELECTORS.sendButton) ?? document.querySelector(CLAUDE_SELECTORS.sendButtonFallback);
         if (btn && !btn.disabled) { clearInterval(iv); btn.click(); resolve(); return; }
         elapsed += 100;
         if (elapsed > 5000) { clearInterval(iv); reject(new Error('Claude: send button timeout')); }

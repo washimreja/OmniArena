@@ -20,7 +20,7 @@ export class GrokAdapter implements AIPlatformAdapter {
   }
 
   async sendPrompt(prompt: string): Promise<void> {
-    const inputEl = document.querySelector<HTMLTextAreaElement>(GROK_SELECTORS.input) ?? document.querySelector<HTMLElement>(GROK_SELECTORS.inputFallback);
+    const inputEl = document.querySelector(GROK_SELECTORS.input) ?? document.querySelector(GROK_SELECTORS.inputFallback);
     if (!inputEl) throw new Error('Grok: input not found');
     inputEl.focus();
     if (inputEl instanceof HTMLTextAreaElement) {
@@ -32,10 +32,10 @@ export class GrokAdapter implements AIPlatformAdapter {
       document.execCommand('insertText', false, prompt);
       inputEl.dispatchEvent(new InputEvent('input', { bubbles: true }));
     }
-    await new Promise<void>((resolve, reject) => {
+    await new Promise((resolve, reject) => {
       let elapsed = 0;
       const iv = setInterval(() => {
-        const btn = document.querySelector<HTMLButtonElement>(GROK_SELECTORS.sendButton) ?? document.querySelector<HTMLButtonElement>(GROK_SELECTORS.sendButtonFallback);
+        const btn = document.querySelector(GROK_SELECTORS.sendButton) ?? document.querySelector(GROK_SELECTORS.sendButtonFallback);
         if (btn && !btn.disabled) { clearInterval(iv); btn.click(); resolve(); return; }
         elapsed += 100;
         if (elapsed > 5000) { clearInterval(iv); reject(new Error('Grok: send button timeout')); }

@@ -4,11 +4,15 @@
   "description": "One Prompt. Your AIs. One Arena. — Send one prompt to all your logged-in AI accounts.",
   "version": "1.0.0",
   "icons": {
-    "16":  "icons/icon16.png",
-    "48":  "icons/icon48.png",
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
     "128": "icons/icon128.png"
   },
-  "permissions": ["tabs", "scripting", "storage"],
+  "permissions": [
+    "tabs",
+    "scripting",
+    "storage"
+  ],
   "host_permissions": [
     "https://chatgpt.com/*",
     "https://*.chatgpt.com/*",
@@ -23,40 +27,68 @@
     "https://vibe.dev/*",
     "https://chat.deepseek.com/*",
     "http://localhost:3000/*",
-    "http://localhost:3001/*"
+    "http://localhost:3001/*",
+    "https://omniarena.vercel.app/*"
   ],
   "background": {
     "service_worker": "background.js"
   },
   "content_scripts": [
     {
-      "matches": ["http://localhost:3000/*", "http://localhost:3001/*"],
-      "js": ["bridge-content.js"],
+      "matches": [
+        "http://localhost:3000/*",
+        "http://localhost:3001/*",
+        "https://omniarena.vercel.app/*"
+      ],
+      "js": [
+        "bridge-content.js"
+      ],
       "run_at": "document_idle"
     },
     {
-      "matches": ["https://chatgpt.com/*", "https://*.chatgpt.com/*"],
-      "js": ["content-chatgpt.js"],
+      "matches": [
+        "https://chatgpt.com/*",
+        "https://*.chatgpt.com/*"
+      ],
+      "js": [
+        "content-chatgpt.js"
+      ],
       "run_at": "document_idle"
     },
     {
-      "matches": ["https://gemini.google.com/*"],
-      "js": ["content-gemini.js"],
+      "matches": [
+        "https://gemini.google.com/*"
+      ],
+      "js": [
+        "content-gemini.js"
+      ],
       "run_at": "document_idle"
     },
     {
-      "matches": ["https://claude.ai/*"],
-      "js": ["content-claude.js"],
+      "matches": [
+        "https://claude.ai/*"
+      ],
+      "js": [
+        "content-claude.js"
+      ],
       "run_at": "document_idle"
     },
     {
-      "matches": ["https://grok.com/*"],
-      "js": ["content-grok.js"],
+      "matches": [
+        "https://grok.com/*"
+      ],
+      "js": [
+        "content-grok.js"
+      ],
       "run_at": "document_idle"
     },
     {
-      "matches": ["https://chat.deepseek.com/*"],
-      "js": ["content-deepseek.js"],
+      "matches": [
+        "https://chat.deepseek.com/*"
+      ],
+      "js": [
+        "content-deepseek.js"
+      ],
       "run_at": "document_idle"
     }
   ],

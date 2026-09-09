@@ -18,33 +18,20 @@ export type ConnectorId =
   | 'vibe';
 
 export type ConnectorTier = 'primary' | 'secondary' | 'extended';
-
 export type ConnectorWave = 1 | 2 | 3;
-
 export type ConnectorStatus = 'connected' | 'not_connected' | 'connecting' | 'coming_soon';
 
 export interface OmniConnector {
-  /** Unique platform identifier */
   id: ConnectorId;
-  /** Display name (e.g. "ChatGPT", "Claude", "Gemini", "Grok") */
   name: string;
-  /** Brand / Company (e.g. "OpenAI", "Anthropic", "Google", "xAI") */
   providerName: string;
-  /** Category description (e.g. "Frontier Reasoning", "Autonomous Agent") */
   category: string;
-  /** Short description of capabilities */
   description: string;
-  /** Direct URL to open account / chat page */
   websiteUrl: string;
-  /** Brand color (hex) */
   brandColor: string;
-  /** Tier: primary (core), secondary (popular), extended (roadmap) */
   tier: ConnectorTier;
-  /** Implementation wave */
   wave: ConnectorWave;
-  /** Whether the adapter/extension currently supports this connector */
   supported: boolean;
-  /** If not yet supported or in future wave */
   isComingSoon?: boolean;
 }
 

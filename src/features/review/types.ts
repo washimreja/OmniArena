@@ -1,7 +1,7 @@
 import type { ArenaResponse } from '@/types/ai';
 
 export type ReviewStatus = 'generating' | 'completed' | 'failed';
-export type PreferenceType = 'preferred' | 'helpful' | 'not_helpful';
+export type PreferenceType = 'preferred' | 'helpful' | 'not_helpful' | 'not_preferred';
 
 export interface ResponsePreference {
   responseId: string;

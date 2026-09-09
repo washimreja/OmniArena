@@ -20,16 +20,16 @@ export class DeepSeekAdapter implements AIPlatformAdapter {
   }
 
   async sendPrompt(prompt: string): Promise<void> {
-    const inputEl = document.querySelector<HTMLTextAreaElement>(DEEPSEEK_SELECTORS.input) ?? document.querySelector<HTMLTextAreaElement>(DEEPSEEK_SELECTORS.inputFallback);
+    const inputEl = document.querySelector(DEEPSEEK_SELECTORS.input) ?? document.querySelector(DEEPSEEK_SELECTORS.inputFallback);
     if (!inputEl) throw new Error('DeepSeek: input not found');
     inputEl.focus();
     const setter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value')?.set;
     setter?.call(inputEl, prompt);
     inputEl.dispatchEvent(new Event('input', { bubbles: true }));
-    await new Promise<void>((resolve, reject) => {
+    await new Promise((resolve, reject) => {
       let elapsed = 0;
       const iv = setInterval(() => {
-        const btn = document.querySelector<HTMLButtonElement>(DEEPSEEK_SELECTORS.sendButton) ?? document.querySelector<HTMLButtonElement>(DEEPSEEK_SELECTORS.sendButtonFallback);
+        const btn = document.querySelector(DEEPSEEK_SELECTORS.sendButton) ?? document.querySelector(DEEPSEEK_SELECTORS.sendButtonFallback);
         if (btn && !btn.disabled) { clearInterval(iv); btn.click(); resolve(); return; }
         elapsed += 100;
         if (elapsed > 5000) { clearInterval(iv); reject(new Error('DeepSeek: send button timeout')); }

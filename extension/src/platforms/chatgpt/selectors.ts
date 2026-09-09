@@ -45,7 +45,7 @@ export const CHATGPT_SELECTORS = {
     'div[data-message-author-role="assistant"]',
     'div.agent-turn',
     'article[data-testid^="conversation-turn-"]:has([data-message-author-role="assistant"])',
-    'div.wm-app-threadViewport [data-message-author-role="assistant"]',
+    'div.wm-app-threadViewport > [data-message-author-role="assistant"]',
   ],
 
   /** Candidate selectors for markdown / text content inside assistant turns */

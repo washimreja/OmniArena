@@ -1,16 +1,16 @@
 // ─── OmniArena Orchestrator ───────────────────────────────────────────────────
 //
-// Decides HOW to route prompts to AI Connectors:
+// Routes prompts to AI Connectors through the browser extension:
 //
-//   Extension mode  → extensionBridge.sendPrompt(connectorIds) → real AI websites
-//   Demo mode       → MockProvider(connectorId) → simulated streaming responses
+// orchestrate() → extensionBridge.sendPrompt(connectorIds) → real AI website
+// tabs via the user's own logged-in sessions.
 //
-// The conversation store calls orchestrate() and receives streaming updates via
-// the onUpdate callback keyed by ConnectorId.
+// Without the extension, orchestrate() returns an HONEST failure per connector
+// — it never fabricates responses. (The hub's demo statuses are independent
+// UI defaults, clearly labelled by the Demo Mode banner.)
 
 import type { OrchestratorOptions, PlatformId } from '@/types/ai';
 import type { ConnectorId } from '@/types/connectors';
-import { mockProvider } from './providers/mock';
 import { extensionBridge } from '@/lib/extension/bridge';
 
 // ─── Extension Mode ───────────────────────────────────────────────────────────
@@ -51,7 +51,7 @@ async function orchestrateViaExtension(options: OrchestratorOptions): Promise<vo
       accumulated.set(connectorId, next);
       onUpdate(connectorId, { status: 'generating', content: next });
     } else if (event.type === 'done') {
-      const fullText = event.fullText || accumulated.get(connectorId) || '';
+      const fullText = event.fullText ?? accumulated.get(connectorId) ?? '';
       onUpdate(connectorId, {
         status: 'completed',
         content: fullText,
@@ -60,7 +60,9 @@ async function orchestrateViaExtension(options: OrchestratorOptions): Promise<vo
     } else if (event.type === 'error') {
       onUpdate(connectorId, {
         status: 'failed',
-        error: event.error,
+        error: event.errorCode === 'AUTH_REQUIRED'
+          ? `${connectorId}: login required — open the platform tab, sign in, then retry.`
+          : event.error,
       });
     }
   });
@@ -71,7 +73,6 @@ async function orchestrateViaExtension(options: OrchestratorOptions): Promise<vo
   // Wait for all platforms to complete (done or error)
   await new Promise<void>((resolve) => {
     const pending = new Set(platforms);
-
     const doneCleanup = extensionBridge.onResponse((platform, event) => {
       if (!pending.has(platform)) return;
       if (event.type === 'done' || event.type === 'error') {
@@ -93,49 +94,6 @@ async function orchestrateViaExtension(options: OrchestratorOptions): Promise<vo
   cleanup();
 }
 
-// ─── Demo Mode (Mock) ─────────────────────────────────────────────────────────
-
-async function orchestrateViaMock(options: OrchestratorOptions): Promise<void> {
-  const { connectorIds, generateOptions, onUpdate } = options;
-
-  connectorIds.forEach((id) => {
-    onUpdate(id, { status: 'waiting', content: '' });
-  });
-
-  await Promise.allSettled(
-    connectorIds.map(async (connectorId) => {
-      try {
-        onUpdate(connectorId, { status: 'generating', content: '' });
-
-        let accumulated = '';
-        const result = await mockProvider.generate(
-          connectorId,
-          generateOptions,
-          (chunk) => {
-            if (!chunk.done) {
-              accumulated += chunk.delta;
-              onUpdate(connectorId, { status: 'generating', content: accumulated });
-            }
-          }
-        );
-
-        onUpdate(connectorId, {
-          status: 'completed',
-          content: result.content,
-          latencyMs: result.latencyMs,
-          tokenCount: result.tokenCount,
-          completedAt: Date.now(),
-        });
-      } catch (error) {
-        onUpdate(connectorId, {
-          status: 'failed',
-          error: error instanceof Error ? error.message : 'Unknown error',
-        });
-      }
-    })
-  );
-}
-
 // ─── Public API ───────────────────────────────────────────────────────────────
 
 export async function orchestrate(options: OrchestratorOptions): Promise<void> {
@@ -145,13 +103,13 @@ export async function orchestrate(options: OrchestratorOptions): Promise<void> {
   if (isExtensionAvailable) {
     await orchestrateViaExtension(options);
   } else {
-    // Explicit notice: No fake/mock responses. Require extension connection.
+    // Explicit notice: no fake/mock responses — real execution requires the
+    // OmniArena browser extension (see README → Extension for setup).
     for (const connectorId of options.connectorIds) {
       options.onUpdate(connectorId, {
         status: 'failed',
-        error: 'OmniArena Extension not loaded. Please open chrome://extensions, enable "Developer mode", click "Load unpacked", and select F:\\WASHIM-PROJECT\\OmniArena\\extension\\dist to connect to your real ChatGPT tab.',
+        error: 'OmniArena Extension not connected. Install it and load it via chrome://extensions → Developer mode → Load unpacked → OmniArena/extension/dist, then reload this page.',
       });
     }
   }
 }
-

@@ -2,14 +2,14 @@ import type { AIPlatformAdapter } from '../adapter';
 import { CHATGPT_SELECTORS } from './selectors';
 
 /** Find the first matching element from a list of candidate selectors */
-function queryAny<T extends Element = HTMLElement>(
+function queryAny<T extends Element>(
   selectors: readonly string[],
   root: ParentNode = document
 ): T | null {
   for (const selector of selectors) {
     try {
-      const el = root.querySelector<T>(selector);
-      if (el) return el;
+      const el = root.querySelector(selector);
+      if (el) return el as T;
     } catch {
       // Ignore invalid or pseudo-class syntax unsupported in current context
     }
@@ -18,19 +18,19 @@ function queryAny<T extends Element = HTMLElement>(
 }
 
 /** Wait for at least one element matching any of the candidate selectors */
-function waitForAny<T extends Element = HTMLElement>(
+function waitForAny(
   selectors: readonly string[],
   timeoutMs = 15000
-): Promise<T | null> {
+): Promise<Element | null> {
   return new Promise((resolve) => {
-    const existing = queryAny<T>(selectors);
+    const existing = queryAny(selectors);
     if (existing) {
       resolve(existing);
       return;
     }
 
     const observer = new MutationObserver(() => {
-      const el = queryAny<T>(selectors);
+      const el = queryAny(selectors);
       if (el) {
         observer.disconnect();
         resolve(el);
@@ -50,17 +50,17 @@ function waitForSendEnabled(timeoutMs = 6000): Promise<HTMLButtonElement | null>
   return new Promise((resolve) => {
     let elapsed = 0;
     const interval = setInterval(() => {
-      const btn = queryAny<HTMLButtonElement>(CHATGPT_SELECTORS.sendButtons);
+      const btn = queryAny(CHATGPT_SELECTORS.sendButtons);
       if (btn && !btn.disabled && btn.getAttribute('aria-disabled') !== 'true') {
         clearInterval(interval);
-        resolve(btn);
+        resolve(btn as HTMLButtonElement);
         return;
       }
       elapsed += 100;
       if (elapsed >= timeoutMs) {
         clearInterval(interval);
         // Return button even if disabled as fallback
-        resolve(btn);
+        resolve(btn as HTMLButtonElement);
       }
     }, 100);
   });
@@ -76,7 +76,7 @@ export class ChatGPTAdapter implements AIPlatformAdapter {
   }
 
   async sendPrompt(prompt: string): Promise<void> {
-    const inputEl = await waitForAny<HTMLElement>(CHATGPT_SELECTORS.inputs, 10000);
+    const inputEl = await waitForAny(CHATGPT_SELECTORS.inputs, 10000);
     if (!inputEl) throw new Error('ChatGPT: input element not found. Please verify ChatGPT is open and logged in.');
 
     // Count turns before submitting so we only observe the new response
@@ -141,7 +141,7 @@ export class ChatGPTAdapter implements AIPlatformAdapter {
 
     // If button became clickable after Enter, click it
     setTimeout(() => {
-      const lateBtn = queryAny<HTMLButtonElement>(CHATGPT_SELECTORS.sendButtons);
+      const lateBtn = queryAny(CHATGPT_SELECTORS.sendButtons);
       if (lateBtn && !lateBtn.disabled) lateBtn.click();
     }, 200);
   }
@@ -165,7 +165,7 @@ export class ChatGPTAdapter implements AIPlatformAdapter {
       }
 
       if (turns.length === 0) return '';
-      const latestTurn = turns[turns.length - 1];
+      const latestTurn = turns[turns.length - 1] as Element;
       if (!latestTurn) return '';
 
       // Search inside markdown contents
@@ -256,4 +256,3 @@ export class ChatGPTAdapter implements AIPlatformAdapter {
     return cleanup;
   }
 }
-

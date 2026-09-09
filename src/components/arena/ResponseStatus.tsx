@@ -4,6 +4,7 @@ import type { ResponseStatus } from '@/types/ai';
 
 interface ResponseStatusProps {
   status: ResponseStatus;
+  error?: string;
   className?: string;
 }
 
@@ -33,12 +34,6 @@ const STATUS_CONFIG: Record<ResponseStatus, {
     label: 'Failed',
     dotClass: 'bg-status-error',
     textClass: 'text-status-error',
-  },
-  retrying: {
-    label: 'Retrying',
-    dotClass: 'bg-status-warning',
-    textClass: 'text-status-warning',
-    animate: true,
   },
 };
 

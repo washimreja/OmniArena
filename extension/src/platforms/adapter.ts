@@ -4,11 +4,20 @@
 // Keeping logic separate from selectors means UI changes only require updating
 // the selectors.ts file for that platform — the adapter logic stays the same.
 
-import type { PlatformId } from '../shared/messages';
+import type { PlatformId, PlatformConnectionStatus } from '../shared/messages';
 
 export interface AIPlatformAdapter {
   /** Identifier matching PlatformId */
   readonly platformId: PlatformId;
+
+  /**
+   * Reports whether the user's account session is usable on this tab.
+   * Default implementation (see content-runner.ts) treats a reachable
+   * composer input as logged in. Adapters may override with sharper
+   * detection (e.g. avatar/sign-in button probes) — but must never read
+   * credentials, cookies, or email content.
+   */
+  detectConnection?(): Promise<PlatformConnectionStatus>;
 
   /**
    * Returns true when the page is loaded, the input is available, and the user

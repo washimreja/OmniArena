@@ -3,85 +3,88 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>OmniArena</title>
+  <title>OmniArena Extension</title>
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
       width: 280px;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      background: #0f0f13;
-      color: #e2e2e8;
-    }
-    .header {
       padding: 16px;
-      border-bottom: 1px solid #1f1f2e;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      margin: 0;
+      background: #12121e;
+      color: #e4e4f0;
+    }
+    h1 {
+      font-size: 16px;
+      font-weight: 600;
+      margin: 0 0 8px;
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 8px;
     }
-    .logo {
-      width: 28px; height: 28px;
-      background: linear-gradient(135deg, #7c3aed, #3b82f6);
-      border-radius: 8px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 14px; font-weight: 700; color: #fff;
-    }
-    .title { font-size: 15px; font-weight: 600; letter-spacing: -0.01em; }
-    .subtitle { font-size: 11px; color: #888; margin-top: 1px; }
     .status {
-      padding: 12px 16px;
-      display: flex; align-items: center; gap: 8px;
-      font-size: 12px;
+      background: #1a1a2b;
+      border-radius: 8px;
+      padding: 10px;
+      margin-bottom: 16px;
+      font-size: 13px;
+      text-align: center;
     }
-    .dot {
-      width: 8px; height: 8px; border-radius: 50%;
-      background: #22c55e;
-      flex-shrink: 0;
+    .status .dot {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #34d399;
+      margin-right: 6px;
+    }
+    .supported-title {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #8888a0;
+      margin: 0 0 8px 0;
     }
     .platforms {
-      padding: 0 16px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
     }
-    .platforms-title {
-      font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em;
-      color: #555; margin-bottom: 8px; padding-top: 4px;
+    .platform-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 8px;
+      background: #1a1a2b;
+      border-radius: 6px;
+      font-size: 13px;
     }
-    .platform {
-      display: flex; align-items: center; gap: 8px;
-      padding: 6px 0; font-size: 12px; color: #aaa;
-      border-bottom: 1px solid #1a1a28;
+    .badge {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #34d399;
+      flex-shrink: 0;
     }
-    .platform:last-child { border-bottom: none; }
-    .platform-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
-    .open-btn {
-      display: block; width: calc(100% - 32px); margin: 0 16px 16px;
-      padding: 8px; text-align: center;
-      background: linear-gradient(135deg, #7c3aed, #3b82f6);
-      color: #fff; border: none; border-radius: 8px;
-      font-size: 12px; font-weight: 600; cursor: pointer;
+    a {
+      color: #7c3aed;
       text-decoration: none;
     }
   </style>
 </head>
 <body>
-  <div class="header">
-    <div class="logo">⚡</div>
-    <div>
-      <div class="title">OmniArena</div>
-      <div class="subtitle">One Prompt. Your AIs. One Arena.</div>
-    </div>
-  </div>
+  <h1>🤖 OmniArena</h1>
   <div class="status">
-    <div class="dot"></div>
-    Extension active — bridge ready
+    <span class="dot"></span> Extension active — bridge ready
   </div>
+  <p class="supported-title">Supported Platforms</p>
   <div class="platforms">
-    <div class="platforms-title">Supported Platforms</div>
-    <div class="platform"><div class="platform-dot" style="background:#10a37f"></div>ChatGPT</div>
-    <div class="platform"><div class="platform-dot" style="background:#4285f4"></div>Gemini</div>
-    <div class="platform"><div class="platform-dot" style="background:#cc785c"></div>Claude</div>
-    <div class="platform"><div class="platform-dot" style="background:#1da1f2"></div>Grok</div>
-    <div class="platform"><div class="platform-dot" style="background:#5b8dee"></div>DeepSeek</div>
+    <div class="platform-row"><span class="badge"></span>ChatGPT</div>
+    <div class="platform-row"><span class="badge"></span>Gemini</div>
+    <div class="platform-row"><span class="badge"></span>Claude</div>
+    <div class="platform-row"><span class="badge"></span>Grok</div>
+    <div class="platform-row"><span class="badge"></span>DeepSeek</div>
   </div>
-  <a href="http://localhost:3000" target="_blank" class="open-btn">Open OmniArena →</a>
+  <p><a href="http://localhost:3000/">Open OmniArena →</a></p>
 </body>
 </html>

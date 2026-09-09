@@ -6,13 +6,13 @@ import { copyFileSync, mkdirSync, existsSync } from 'fs';
 const isWatch = process.argv.includes('--watch');
 
 const entryPoints = [
-  { in: 'src/background.ts',                    out: 'background' },
-  { in: 'src/bridge-content.ts',                out: 'bridge-content' },
-  { in: 'src/platforms/chatgpt/content.ts',     out: 'content-chatgpt' },
-  { in: 'src/platforms/gemini/content.ts',      out: 'content-gemini' },
-  { in: 'src/platforms/claude/content.ts',      out: 'content-claude' },
-  { in: 'src/platforms/grok/content.ts',        out: 'content-grok' },
-  { in: 'src/platforms/deepseek/content.ts',    out: 'content-deepseek' },
+  { in: 'src/background.ts', out: 'background' },
+  { in: 'src/bridge-content.ts', out: 'bridge-content' },
+  { in: 'src/platforms/chatgpt/content.ts', out: 'content-chatgpt' },
+  { in: 'src/platforms/gemini/content.ts', out: 'content-gemini' },
+  { in: 'src/platforms/claude/content.ts', out: 'content-claude' },
+  { in: 'src/platforms/grok/content.ts', out: 'content-grok' },
+  { in: 'src/platforms/deepseek/content.ts', out: 'content-deepseek' },
 ];
 
 const buildOptions = {
@@ -48,5 +48,5 @@ if (isWatch) {
   await esbuild.build(buildOptions);
   copyStatics();
   console.log('✅ OmniArena Extension built → dist/');
-  console.log('   Load in Chrome: chrome://extensions → Load unpacked → select dist/');
+  console.log(' Load in Chrome: chrome://extensions → Load unpacked → select dist/');
 }

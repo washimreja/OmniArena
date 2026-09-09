@@ -29,8 +29,8 @@ export class GeminiAdapter implements AIPlatformAdapter {
 
   async sendPrompt(prompt: string): Promise<void> {
     const inputEl =
-      document.querySelector<HTMLElement>(GEMINI_SELECTORS.input) ??
-      document.querySelector<HTMLElement>(GEMINI_SELECTORS.inputFallback);
+      document.querySelector(GEMINI_SELECTORS.input) ??
+      document.querySelector(GEMINI_SELECTORS.inputFallback);
     if (!inputEl) throw new Error('Gemini: input not found');
 
     inputEl.focus();
@@ -38,12 +38,12 @@ export class GeminiAdapter implements AIPlatformAdapter {
     document.execCommand('insertText', false, prompt);
     inputEl.dispatchEvent(new InputEvent('input', { bubbles: true }));
 
-    await new Promise<void>((resolve, reject) => {
+    await new Promise((resolve, reject) => {
       let elapsed = 0;
       const iv = setInterval(() => {
         const btn =
-          document.querySelector<HTMLButtonElement>(GEMINI_SELECTORS.sendButton) ??
-          document.querySelector<HTMLButtonElement>(GEMINI_SELECTORS.sendButtonFallback);
+          document.querySelector(GEMINI_SELECTORS.sendButton) ??
+          document.querySelector(GEMINI_SELECTORS.sendButtonFallback);
         if (btn && !btn.disabled) { clearInterval(iv); btn.click(); resolve(); return; }
         elapsed += 100;
         if (elapsed > 5000) { clearInterval(iv); reject(new Error('Gemini: send button timeout')); }
@@ -65,7 +65,7 @@ export class GeminiAdapter implements AIPlatformAdapter {
       const latest = els[els.length - 1];
       if (!latest) return '';
       const md = latest.querySelector(GEMINI_SELECTORS.responseText) ??
-                 latest.querySelector(GEMINI_SELECTORS.responseTextFallback);
+        latest.querySelector(GEMINI_SELECTORS.responseTextFallback);
       return (md ?? latest).textContent ?? '';
     };
 
